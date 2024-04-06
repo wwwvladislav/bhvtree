@@ -1,4 +1,4 @@
-# bhvtree [![CMake on multiple platforms](https://github.com/cppttl/bhvtree/actions/workflows/test.yml/badge.svg)](https://github.com/cppttl/bhvtree/actions/workflows/test.yml) ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+# bhvtree [![CMake on multiple platforms](https://github.com/wwwvladislav/bhvtree/actions/workflows/test.yml/badge.svg)](https://github.com/wwwvladislav/bhvtree/actions/workflows/test.yml) ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 This library provides functionality for manipulating behavior trees. The library is written in C++17.
 The main goal of the library is to be as small as possible and easier to integrate with other projects.
 The library contains only two files located in the src subdirectory.
