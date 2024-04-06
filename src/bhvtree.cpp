@@ -397,6 +397,7 @@ switch_::switch_(std::string_view name) : base(node_type::switch_, name) {}
 node::cptr switch_::default_handler() const { return _default_handler; }
 switch_::iterator switch_::begin() const { return iterator(*this, true); }
 switch_::iterator switch_::end() const { return iterator(*this, false); }
+bool switch_::empty() const { return !_default_handler && _childs.empty(); }
 
 status switch_::tick() {
   if (_childs.size() != _map.size())

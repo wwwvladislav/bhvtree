@@ -24,12 +24,22 @@
 #include "bhvtree.hpp"
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace cppttl {
 namespace bhv {
 namespace {
-
 using namespace std::string_literals;
+
+namespace lex {
+static const auto none = "none"s;
+static const auto pred = "pred"s;
+static const auto then_ = "then"s;
+static const auto else_ = "else"s;
+static const auto case_ = "case"s;
+static const auto default_ = "default"s;
+static const auto body = "body"s;
+} // namespace lex
 
 const char *type_name(node const &n) { return to_string(n.type()); }
 
@@ -67,18 +77,27 @@ public:
 
 private:
   std::ostream &indent(size_t layer) const;
-  void save(node const &ref, size_t layer) const;
-  void save(action const &ref, size_t layer) const;
-  void save(condition const &ref, size_t layer) const;
-  void save(sequence const &ref, size_t layer) const;
-  void save(fallback const &ref, size_t layer) const;
-  void save(parallel const &ref, size_t layer) const;
-  void save(if_ const &ref, size_t layer) const;
-  void save(switch_ const &ref, size_t layer) const;
-  void save(invert const &ref, size_t layer) const;
-  void save(repeat const &ref, size_t layer) const;
-  void save(retry const &ref, size_t layer) const;
-  void save(force const &ref, size_t layer) const;
+  void save(basic_control::childs_list const &list, size_t layer) const;
+  void save(node const &ref, size_t layer, std::string_view prefix = "") const;
+  void save(action const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(condition const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(sequence const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(fallback const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(parallel const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(if_ const &ref, size_t layer, std::string_view prefix = "") const;
+  void save(switch_ const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(invert const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(repeat const &ref, size_t layer,
+            std::string_view prefix = "") const;
+  void save(retry const &ref, size_t layer, std::string_view prefix = "") const;
+  void save(force const &ref, size_t layer, std::string_view prefix = "") const;
 
 private:
   std::ostream &_stream;
@@ -99,40 +118,47 @@ std::ostream &serializer::indent(size_t layer) const {
   return _stream;
 }
 
-void serializer::save(node const &ref, size_t layer) const {
+void serializer::save(basic_control::childs_list const &list,
+                      size_t layer) const {
+  for (auto &child : list)
+    save(*child, layer, "- ");
+}
+
+void serializer::save(node const &ref, size_t layer,
+                      std::string_view prefix) const {
   switch (ref.type()) {
   case node_type::action:
-    save(static_cast<action const &>(ref), layer);
+    save(static_cast<action const &>(ref), layer, prefix);
     break;
   case node_type::condition:
-    save(static_cast<condition const &>(ref), layer);
+    save(static_cast<condition const &>(ref), layer, prefix);
     break;
   case node_type::sequence:
-    save(static_cast<sequence const &>(ref), layer);
+    save(static_cast<sequence const &>(ref), layer, prefix);
     break;
   case node_type::fallback:
-    save(static_cast<fallback const &>(ref), layer);
+    save(static_cast<fallback const &>(ref), layer, prefix);
     break;
   case node_type::parallel:
-    save(static_cast<parallel const &>(ref), layer);
+    save(static_cast<parallel const &>(ref), layer, prefix);
     break;
   case node_type::if_:
-    save(static_cast<if_ const &>(ref), layer);
+    save(static_cast<if_ const &>(ref), layer, prefix);
     break;
   case node_type::switch_:
-    save(static_cast<switch_ const &>(ref), layer);
+    save(static_cast<switch_ const &>(ref), layer, prefix);
     break;
   case node_type::invert:
-    save(static_cast<invert const &>(ref), layer);
+    save(static_cast<invert const &>(ref), layer, prefix);
     break;
   case node_type::repeat:
-    save(static_cast<repeat const &>(ref), layer);
+    save(static_cast<repeat const &>(ref), layer, prefix);
     break;
   case node_type::retry:
-    save(static_cast<retry const &>(ref), layer);
+    save(static_cast<retry const &>(ref), layer, prefix);
     break;
   case node_type::force:
-    save(static_cast<force const &>(ref), layer);
+    save(static_cast<force const &>(ref), layer, prefix);
     break;
   case node_type::custom:
     throw std::runtime_error("Unsupported node type");
@@ -140,144 +166,148 @@ void serializer::save(node const &ref, size_t layer) const {
   }
 }
 
-void serializer::save(action const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref) << std::endl;
+void serializer::save(action const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref)
+                << std::endl;
 }
 
-void serializer::save(condition const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref) << std::endl;
+void serializer::save(condition const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref)
+                << std::endl;
 }
 
-void serializer::save(sequence const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref);
+void serializer::save(sequence const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref) << ":";
 
   if (!ref.childs().empty()) {
-    _stream << " {" << std::endl;
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
-    indent(layer) << "}";
+    _stream << std::endl;
+    save(ref.childs(), layer + 1);
+  } else {
+    _stream << " " << lex::none << std::endl;
   }
-
-  _stream << std::endl;
 }
 
-void serializer::save(fallback const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref);
+void serializer::save(fallback const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref) << ":";
 
   if (!ref.childs().empty()) {
-    _stream << " {" << std::endl;
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
-    indent(layer) << "}";
+    _stream << std::endl;
+    save(ref.childs(), layer + 1);
+  } else {
+    _stream << " " << lex::none << std::endl;
   }
-
-  _stream << std::endl;
 }
 
-void serializer::save(parallel const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " threshold=" << ref.threshold() << " "
-                << node_name(ref);
+void serializer::save(parallel const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " threshold=" << ref.threshold()
+                << " " << node_name(ref) << ":";
 
   if (!ref.childs().empty()) {
-    _stream << " {" << std::endl;
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
-    indent(layer) << "}";
+    _stream << std::endl;
+    save(ref.childs(), layer + 1);
+  } else {
+    _stream << " " << lex::none << std::endl;
   }
-
-  _stream << std::endl;
 }
 
-void serializer::save(if_ const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref);
+void serializer::save(if_ const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref) << ":";
 
   if (!ref.childs().empty()) {
-    _stream << " {" << std::endl;
+    _stream << std::endl;
 
     if (ref.condition()) {
-      indent(layer + 1) << "condition" << std::endl;
-      save(*ref.condition(), layer + 2);
+      save(*ref.condition(), layer + 1, lex::pred + ": ");
     }
     if (ref.then_()) {
-      indent(layer + 1) << "then" << std::endl;
-      save(*ref.then_(), layer + 2);
+      save(*ref.then_(), layer + 1, lex::then_ + ": ");
     }
     if (ref.else_()) {
-      indent(layer + 1) << "else" << std::endl;
-      save(*ref.else_(), layer + 2);
+      save(*ref.else_(), layer + 1, lex::else_ + ": ");
     }
-
-    indent(layer) << "}";
+  } else {
+    _stream << " " << lex::none << std::endl;
   }
-
-  _stream << std::endl;
 }
 
-void serializer::save(switch_ const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref);
+void serializer::save(switch_ const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref) << ":";
 
-  if (!ref.childs().empty() || ref.default_handler()) {
-    _stream << " {" << std::endl;
+  if (!ref.empty()) {
+    _stream << std::endl;
 
     node::cptr handler;
 
     for (auto &&case_ : ref) {
       if (handler && handler != case_.handler())
-        save(*handler, layer + 1);
-      save(*case_.condition(), layer);
+        save(*handler, layer + 2, lex::body + ": ");
+      save(*case_.condition(), layer + 1, "- " + lex::case_ + ": ");
       handler = case_.handler();
     }
 
     if (handler)
-      save(*handler, layer + 1);
+      save(*handler, layer + 2, lex::body + ": ");
 
     if (ref.default_handler()) {
-      indent(layer) << "default" << std::endl;
-      save(*ref.default_handler(), layer + 1);
+      save(*ref.default_handler(), layer + 1, "- " + lex::default_ + ": ");
     }
-
-    indent(layer) << "}";
-  }
-
-  _stream << std::endl;
-}
-
-void serializer::save(invert const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " " << node_name(ref) << std::endl;
-
-  if (!ref.childs().empty()) {
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
+  } else {
+    _stream << " " << lex::none << std::endl;
   }
 }
 
-void serializer::save(repeat const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " n=" << ref.count() << " "
-                << node_name(ref) << std::endl;
+void serializer::save(invert const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " " << node_name(ref) << ": ";
 
   if (!ref.childs().empty()) {
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
+    save(*ref.childs().front(), 0);
+  } else {
+    _stream << lex::none << std::endl;
   }
 }
 
-void serializer::save(retry const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " n=" << ref.count() << " "
-                << node_name(ref) << std::endl;
+void serializer::save(repeat const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " n=" << ref.count() << " "
+                << node_name(ref) << ": ";
 
   if (!ref.childs().empty()) {
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
+    save(*ref.childs().front(), 0);
+  } else {
+    _stream << lex::none << std::endl;
   }
 }
 
-void serializer::save(force const &ref, size_t layer) const {
-  indent(layer) << type_name(ref) << " status=" << to_string(ref.result())
-                << " " << node_name(ref) << std::endl;
+void serializer::save(retry const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref) << " n=" << ref.count() << " "
+                << node_name(ref) << ": ";
 
   if (!ref.childs().empty()) {
-    for (auto &child : ref.childs())
-      save(*child, layer + 1);
+    save(*ref.childs().front(), 0);
+  } else {
+    _stream << lex::none << std::endl;
+  }
+}
+
+void serializer::save(force const &ref, size_t layer,
+                      std::string_view prefix) const {
+  indent(layer) << prefix << type_name(ref)
+                << " status=" << to_string(ref.result()) << " "
+                << node_name(ref) << ": ";
+
+  if (!ref.childs().empty()) {
+    save(*ref.childs().front(), 0);
+  } else {
+    _stream << lex::none << std::endl;
   }
 }
 

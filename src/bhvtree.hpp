@@ -361,6 +361,7 @@ public:
 
   iterator begin() const;
   iterator end() const;
+  bool empty() const;
 
 private:
   status tick() final;
